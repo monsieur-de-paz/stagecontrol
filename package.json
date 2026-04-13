@@ -1,0 +1,34 @@
+{
+  "name": "stagecontrol",
+  "version": "0.1.0",
+  "description": "StageControl — Régie de spectacle et animation",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.stagecontrol.app",
+    "productName": "StageControl",
+    "mac": {
+      "category": "public.app-category.entertainment",
+      "target": "dmg",
+      "darkModeSupport": true,
+      "extendInfo": {
+        "NSCameraUsageDescription": "StageControl a besoin de la caméra pour filmer les participants.",
+        "NSMicrophoneUsageDescription": "StageControl peut utiliser le micro pour les sons."
+      }
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "control.html",
+      "display.html"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.0"
+  }
+}

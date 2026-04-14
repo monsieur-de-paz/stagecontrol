@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>StageControl — DISPLAY</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Exo+2:wght@300;600;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="fonts/local-fonts.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--fd:'Bebas Neue',cursive;--fu:'Exo 2',sans-serif}
@@ -26,8 +26,9 @@ body{background:#000;width:100vw;height:100vh;overflow:hidden;font-family:var(--
 .gtitle{font-family:var(--fd);font-size:72px;letter-spacing:6px;line-height:1;margin-top:6px}
 .gdesc{font-size:22px;font-weight:300;opacity:.75;margin-top:6px}
 .gcontent{font-family:var(--fu);font-size:36px;font-weight:600;margin-top:16px;
-  max-width:75vw;text-align:center;line-height:1.3;
-  padding:14px 28px;background:rgba(0,0,0,.35);border-radius:12px;display:none}
+  max-width:85vw;text-align:center;line-height:1.3;
+  padding:20px 36px;background:rgba(0,0,0,.65);border-radius:16px;display:none;
+  border:2px solid;box-shadow:0 10px 40px rgba(0,0,0,.6)}
 
 /* TIMER */
 #ovlTimer{top:28px;right:44px}
@@ -269,6 +270,15 @@ if (window.sc) {
   bc = new BroadcastChannel('stagecontrol');
 }
 
+// Preview mode: receive messages from parent via postMessage
+if (isPreview) {
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type) {
+      if (bc.onmessage) bc.onmessage({ data: e.data });
+    }
+  });
+}
+
 function ping() {
   if (isPreview) return;
   bc.postMessage({ type: 'display-ready' });
@@ -325,7 +335,11 @@ var stream = null;
 var feed = document.getElementById('feed');
 
 function initCam() {
-  if (isPreview) return;
+  if (isPreview) {
+    // Notify parent we're ready to receive camera
+    if (window.parent !== window) window.parent.postMessage({ type: 'preview-ready' }, '*');
+    return;
+  }
   navigator.mediaDevices.getUserMedia({
     video: { width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false
   }).then(function(s) {
@@ -342,7 +356,7 @@ function switchCam(deviceId) {
   }).then(function(s) {
     stream = s; feed.srcObject = s;
     document.getElementById('standby').style.display = 'none';
-    startRec(s);
+    if(!isPreview) startRec(s);
   }).catch(function(err) { console.warn('Cam switch:', err); });
 }
 
@@ -492,7 +506,7 @@ function showGame(g) {
   var contentEl = document.getElementById('gcontent');
   if (g.content && g.showContent !== false) {
     contentEl.textContent = g.content;
-    contentEl.style.display = '';
+    contentEl.style.display = 'block';
   } else {
     contentEl.textContent = '';
     contentEl.style.display = 'none';
@@ -679,6 +693,10 @@ function playSound(name) {
     case 'applause': noise(2, .25); break;
     case 'tick': tone(1100, .1, 'sine', .35); break;
     case 'suspense': [110, 116, 123].forEach(function(f, i) { tone(f, .9, 'sine', .3, i * .7); }); break;
+    case 'fail': [300, 270, 240, 200].forEach(function(f, i) { tone(f, .4, 'sawtooth', .5, i * .3); }); break;
+    case 'drumroll': for(var dr=0;dr<20;dr++)(function(j){setTimeout(function(){noise(.05,.2)},j*80)})(dr); break;
+    case 'gong': tone(150, 2, 'sine', .8); noise(.5, .3); break;
+    case 'ding': tone(880, .1, 'sine', .5); tone(1100, .3, 'sine', .5, .1); break;
   }
 }
 function playCustomSound(dataUrl) {

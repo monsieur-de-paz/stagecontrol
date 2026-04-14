@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>StageControl — RÉGIE</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="fonts/local-fonts.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -190,7 +190,7 @@ input[type=range]{width:100%;accent-color:var(--yellow);cursor:pointer}
 <aside class="left">
   <div class="st">📺 Aperçu Display</div>
   <div class="prev-wrap" id="prevWrap">
-    <iframe id="prevFrame" src="display.html?preview=1"></iframe>
+    <iframe id="prevFrame" src="display.html?preview=1" allow="camera;microphone;autoplay"></iframe>
     <canvas id="drawOverlay"></canvas>
   </div>
 
@@ -340,6 +340,10 @@ input[type=range]{width:100%;accent-color:var(--yellow);cursor:pointer}
     <button class="btn y" onclick="snd('applause')">👏 Applaus.</button>
     <button class="btn y" onclick="snd('tick')">⏰ Tic-tac</button>
     <button class="btn y" onclick="snd('suspense')">😰 Suspens</button>
+    <button class="btn y" onclick="snd('fail')">😵 Fail</button>
+    <button class="btn y" onclick="snd('drumroll')">🥁 Roulement</button>
+    <button class="btn y" onclick="snd('gong')">🔔 Gong</button>
+    <button class="btn y" onclick="snd('ding')">✨ Ding</button>
   </div>
 
   <div class="st">🎵 Soundboard Custom</div>
@@ -436,17 +440,34 @@ input[type=range]{width:100%;accent-color:var(--yellow);cursor:pointer}
 <script>
 // ═══ COMMUNICATION BRIDGE ══════════════════════════
 var bc;
+function relayToPreview(d) {
+  try { var f = document.getElementById('prevFrame'); if (f && f.contentWindow) f.contentWindow.postMessage(d, '*'); } catch(e) {}
+}
 if (window.sc) {
   bc = {
-    postMessage: function(d) { window.sc.send(d); },
+    postMessage: function(d) { window.sc.send(d); relayToPreview(d); },
     onmessage: null
   };
   window.sc.onMessage(function(d) {
     if (bc.onmessage) bc.onmessage({ data: d });
   });
 } else {
-  bc = new BroadcastChannel('stagecontrol');
+  var _bc = new BroadcastChannel('stagecontrol');
+  bc = {
+    postMessage: function(d) { _bc.postMessage(d); relayToPreview(d); },
+    onmessage: null
+  };
+  _bc.onmessage = function(e) { if (bc.onmessage) bc.onmessage(e); };
 }
+
+// Handle preview iframe ready
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'preview-ready') {
+    var id = document.getElementById('camSel').value;
+    if (id && id !== 'Chargement\u2026') relayToPreview({ type: 'switch-camera', deviceId: id });
+    sync();
+  }
+});
 
 var replayMode = false, replayIsPaused = false;
 
@@ -492,6 +513,9 @@ function initCam() {
     return navigator.mediaDevices.enumerateDevices();
   }).then(function(devs) {
     populateCamSelect(devs);
+    // Send initial camera to preview iframe
+    var selId = document.getElementById('camSel').value;
+    if (selId) relayToPreview({ type: 'switch-camera', deviceId: selId });
     setTimeout(function() { navigator.mediaDevices.enumerateDevices().then(populateCamSelect).catch(function() {}); }, 2000);
     setTimeout(function() { navigator.mediaDevices.enumerateDevices().then(populateCamSelect).catch(function() {}); }, 5000);
   }).catch(function(err) { console.warn('Camera:', err); });
@@ -693,7 +717,7 @@ function timerToggle() {
     b.textContent = '\u23F8 Pause'; b.className = 'btn p';
     tInt = setInterval(function() {
       if (tVal > 0) { tVal--; updT(); if (tVal === 5) snd('tick');
-        if (tVal === 0) { tRun = false; clearInterval(tInt); b.textContent = '\u25B6 Start'; b.className = 'btn g'; snd('buzzer'); } }
+        if (tVal === 0) { tRun = false; clearInterval(tInt); b.textContent = '\u25B6 Start'; b.className = 'btn g'; snd('buzzer'); if(curGame) hideOvl(); } }
     }, 1000);
   } else { clearInterval(tInt); b.textContent = '\u25B6 Start'; b.className = 'btn g'; }
   updT();
@@ -750,6 +774,10 @@ function snd(name) {
     case 'applause': noise(2, .25); break;
     case 'tick': tone(1100, .1, 'sine', .35); break;
     case 'suspense': [110, 116, 123].forEach(function(f, i) { tone(f, .9, 'sine', .3, i * .7); }); break;
+    case 'fail': [300, 270, 240, 200].forEach(function(f, i) { tone(f, .4, 'sawtooth', .5, i * .3); }); break;
+    case 'drumroll': for(var dr=0;dr<20;dr++)(function(j){setTimeout(function(){noise(.05,.2)},j*80)})(dr); break;
+    case 'gong': tone(150, 2, 'sine', .8); noise(.5, .3); break;
+    case 'ding': tone(880, .1, 'sine', .5); tone(1100, .3, 'sine', .5, .1); break;
   }
 }
 

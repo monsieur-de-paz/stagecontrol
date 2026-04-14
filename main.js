@@ -1,5 +1,13 @@
-const { app, BrowserWindow, ipcMain, systemPreferences, screen, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, systemPreferences, screen, Menu, session, protocol, net } = require('electron');
 const path = require('path');
+const { pathToFileURL } = require('url');
+
+// ═══ CUSTOM PROTOCOL ═══════════════════════════════
+// Serve everything under app:// so pages + iframes share one origin
+protocol.registerSchemesAsPrivileged([{
+  scheme: 'app',
+  privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: false, stream: true }
+}]);
 
 let controlWin = null;
 let displayWin = null;
@@ -67,7 +75,7 @@ function createWindows() {
       nodeIntegration: false
     }
   });
-  controlWin.loadFile('control.html');
+  controlWin.loadURL('app://local/control.html');
 
   // Display window — on external monitor if available, otherwise secondary window
   const displayBounds = external
@@ -84,7 +92,7 @@ function createWindows() {
       nodeIntegration: false
     }
   });
-  displayWin.loadFile('display.html');
+  displayWin.loadURL('app://local/display.html');
 
   // Fullscreen on external monitor
   if (external) {
@@ -144,7 +152,7 @@ function buildMenu() {
                   nodeIntegration: false
                 }
               });
-              displayWin.loadFile('display.html');
+              displayWin.loadURL('app://local/display.html');
               if (external) displayWin.setFullScreen(true);
               displayWin.on('closed', () => { displayWin = null; });
             } else {
@@ -202,6 +210,16 @@ app.whenReady().then(async () => {
       await systemPreferences.askForMediaAccess('camera');
     }
   }
+
+  // Register app:// protocol handler
+  protocol.handle('app', (request) => {
+    const reqUrl = new URL(request.url);
+    const filePath = path.join(__dirname, decodeURIComponent(reqUrl.pathname));
+    return net.fetch(pathToFileURL(filePath).toString());
+  });
+
+  // Allow camera/microphone everywhere (main windows + preview iframe)
+  session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(true));
 
   buildMenu();
   createWindows();

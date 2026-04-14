@@ -24,7 +24,8 @@
       "main.js",
       "preload.js",
       "control.html",
-      "display.html"
+      "display.html",
+      "fonts/**/*"
     ]
   },
   "devDependencies": {

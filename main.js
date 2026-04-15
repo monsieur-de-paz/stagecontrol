@@ -32,8 +32,7 @@ function openAboutWindow() {
     minimizable: false,
     maximizable: false,
     fullscreenable: false,
-    frame: false,
-    titleBarStyle: 'hidden',
+    titleBarStyle: 'hiddenInset',
     title: 'À propos — StageControl',
     icon: path.join(__dirname, 'icone', 'stagecontrol.icns'),
     backgroundColor: '#07070f',
@@ -238,6 +237,28 @@ function buildMenu() {
         {
           label: 'À propos de StageControl…',
           click: () => openAboutWindow()
+        },
+        { type: 'separator' },
+        {
+          label: 'Réinitialiser l\'application…',
+          click: async () => {
+            const result = await dialog.showMessageBox(controlWin || BrowserWindow.getFocusedWindow(), {
+              type: 'warning',
+              title: 'Réinitialiser StageControl',
+              message: 'Réinitialiser entièrement l\'application ?',
+              detail: 'Tous les joueurs, sons, mèmes, paramètres et réglages seront supprimés. Cette action est irréversible.',
+              buttons: ['Réinitialiser', 'Annuler'],
+              defaultId: 1,
+              cancelId: 1
+            });
+            if (result.response === 0) {
+              if (configPath && fs.existsSync(configPath)) fs.unlinkSync(configPath);
+              if (controlWin && !controlWin.isDestroyed()) {
+                await controlWin.webContents.executeJavaScript('localStorage.clear()');
+                controlWin.reload();
+              }
+            }
+          }
         },
         { type: 'separator' },
         { role: 'quit', label: 'Quitter' }

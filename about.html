@@ -4,6 +4,173 @@
 <meta charset="UTF-8">
 <title>À propos — StageControl</title>
 <style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%;
+  background: #07070f;
+  color: #e8e8ff;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 52px;
+  -webkit-app-region: drag;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 0 32px 28px;
+  -webkit-app-region: no-drag;
+}
+.app-icon {
+  width: 80px; height: 80px;
+  border-radius: 18px;
+  object-fit: cover;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.08),
+    0 8px 32px rgba(0,0,0,.6),
+    0 0 0 4px rgba(0,212,255,.08);
+}
+.app-name { text-align: center; }
+.app-name h1 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #e8e8ff;
+  letter-spacing: -.3px;
+  line-height: 1.2;
+}
+.app-name .sub {
+  font-size: 10px;
+  font-weight: 500;
+  color: #3a3a5a;
+  margin-top: 4px;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+}
+.version-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0,212,255,.07);
+  border: 1px solid rgba(0,212,255,.22);
+  color: #00d4ff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+}
+.sep {
+  width: 80%;
+  height: 1px;
+  background: #1a1a32;
+  margin: 2px 0;
+}
+.dev-block { text-align: center; display: flex; flex-direction: column; gap: 5px; }
+.dev-label {
+  font-size: 10px;
+  color: #3a3a5a;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+.dev-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffd600;
+}
+.bio {
+  font-size: 11.5px;
+  color: #505080;
+  text-align: center;
+  line-height: 1.7;
+  max-width: 260px;
+}
+.links { display: flex; gap: 10px; margin-top: 4px; }
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  transition: opacity .1s, filter .1s;
+}
+.link-btn:hover { filter: brightness(1.15); }
+.link-btn:active { opacity: .75; }
+.link-btn.github {
+  background: #161b22;
+  border: 1px solid #2d333b;
+  color: #cdd9e5;
+}
+.link-btn.site {
+  background: rgba(0,212,255,.09);
+  border: 1px solid rgba(0,212,255,.25);
+  color: #00d4ff;
+}
+</style>
+</head>
+<body>
+<div class="card">
+
+  <img class="app-icon" src="icone/stagecontrol-1024px.png" alt="StageControl">
+
+  <div class="app-name">
+    <h1>LOL Qui rit sort !</h1>
+    <div class="sub">StageControl — Régie de jeu</div>
+  </div>
+
+  <div class="version-pill">v0.2.0-beta</div>
+
+  <div class="sep"></div>
+
+  <div class="dev-block">
+    <div class="dev-label">Développé par</div>
+    <div class="dev-name">Sandro de PAZ</div>
+  </div>
+
+  <p class="bio">
+    Professeur de technologie le jour, directeur de colonie de vacances à chaque petites ou grandes vacances. Ancien animateur reconverti en directeur, Sandro a créé StageControl pour animer ses séjours avec la même énergie que ses cours.
+  </p>
+
+  <div class="links">
+    <button class="link-btn github" onclick="openUrl('https://github.com/monsieur-de-paz/stagecontrol')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+      </svg>
+      GitHub
+    </button>
+    <button class="link-btn site" onclick="openUrl('https://www.sandrodepaz.fr')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </svg>
+      sandrodepaz.fr
+    </button>
+  </div>
+
+</div>
+<script>
+function openUrl(url) {
+  if (window.sc && window.sc.openUrl) window.sc.openUrl(url);
+}
+</script>
+</body>
+</html>
+<style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
   --bg:#07070f;

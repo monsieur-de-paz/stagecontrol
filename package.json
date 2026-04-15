@@ -1,6 +1,6 @@
 {
   "name": "stagecontrol",
-  "version": "0.1.0",
+  "version": "0.2.0-beta",
   "description": "StageControl — Régie de spectacle et animation",
   "main": "main.js",
   "scripts": {

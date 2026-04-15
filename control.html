@@ -352,6 +352,7 @@ input[type=range]{width:100%;accent-color:var(--yellow);cursor:pointer}
   <div class="row">
     <button class="btn sm c" onclick="document.getElementById('memeImgInput').click()">+ Images</button>
     <button class="btn sm c" onclick="document.getElementById('memeVidInput').click()">+ Vidéos</button>
+    <button class="btn sm p" onclick="bc.postMessage({type:'hide-meme'})">✕ Masquer meme</button>
     <input type="file" id="memeImgInput" accept="image/*" multiple style="display:none" onchange="handleMemeUpload(this,'image')">
     <input type="file" id="memeVidInput" accept="video/*" multiple style="display:none" onchange="handleMemeUpload(this,'video')">
   </div>
@@ -379,12 +380,13 @@ input[type=range]{width:100%;accent-color:var(--yellow);cursor:pointer}
     <button class="btn y" onclick="snd('gong')">🔔 Gong</button>
     <button class="btn y" onclick="snd('ding')">✨ Ding</button>
   </div>
+  <button class="btn sm p w" onclick="stopAllSounds();bc.postMessage({type:'stop-all-sounds'})">⏹ Couper tous les sons</button>
 
   <div class="st">🎵 Soundboard Custom</div>
   <div id="sbCustom"><div class="hint">Aucun son custom</div></div>
   <div class="row">
-    <button class="btn sm c" onclick="document.getElementById('mp3Input').click()">+ Ajouter un MP3</button>
-    <input type="file" id="mp3Input" accept=".mp3,audio/mpeg,audio/*" style="display:none" onchange="handleMp3Upload(this)">
+    <button class="btn sm c" onclick="document.getElementById('mp3Input').click()">+ Ajouter des MP3</button>
+    <input type="file" id="mp3Input" accept=".mp3,.wav,.ogg,.m4a,.aac,audio/*" multiple style="display:none" onchange="handleMp3Upload(this)">
   </div>
 
   <div class="st">📊 Scores / Display</div>
@@ -840,17 +842,20 @@ function snd(name) {
 // ═══ CUSTOM SOUNDBOARD ═════════════════════════════
 var customSounds = [];
 function handleMp3Upload(input) {
-  var file = input.files[0]; if (!file) return;
-  if (file.size > 2 * 1024 * 1024) { alert('Fichier trop volumineux (max 2 Mo).'); input.value = ''; return; }
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var emoji = prompt('Emoji pour ce son :', '\uD83C\uDFB5') || '\uD83C\uDFB5';
-    var name = prompt('Nom du son :', file.name.replace(/\.mp3$/i, '')) || file.name;
-    var desc = prompt('Description courte :', '') || '';
-    customSounds.push({ emoji: emoji, name: name, desc: desc, dataUrl: e.target.result });
-    saveCustomSounds(); renderCustomSounds();
-  };
-  reader.readAsDataURL(file); input.value = '';
+  var files = input.files; if (!files || !files.length) return;
+  for (var fi = 0; fi < files.length; fi++) {
+    (function(file) {
+      if (file.size > 10 * 1024 * 1024) { alert(file.name + ' trop volumineux (max 10 Mo).'); return; }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var name = file.name.replace(/\.(mp3|wav|ogg|m4a|aac|webm)$/i, '');
+        customSounds.push({ emoji: '\uD83C\uDFB5', name: name, desc: '', dataUrl: e.target.result });
+        saveCustomSounds(); renderCustomSounds();
+      };
+      reader.readAsDataURL(file);
+    })(files[fi]);
+  }
+  input.value = '';
 }
 function renderCustomSounds() {
   var el = document.getElementById('sbCustom');

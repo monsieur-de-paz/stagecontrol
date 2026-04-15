@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="1024" height="1024">
+  <defs>
+    <style>@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900;1,9..144,700;1,9..144,900&amp;display=swap');</style>
+  </defs>
+  
+  <defs>
+    <linearGradient id="ns-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E63946"/>
+      <stop offset="100%" stop-color="#9B0000"/>
+    </linearGradient>
+    <filter id="noise-f"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feBlend in="SourceGraphic" mode="overlay" result="blend"/><feComposite in="blend" in2="SourceGraphic" operator="in"/></filter>
+  </defs>
+  <rect width="200" height="200" rx="42" ry="42" fill="url(#ns-bg)"/>
+  <rect width="200" height="200" rx="42" ry="42" filter="url(#noise-f)" opacity=".18"/>
+  <filter id="txt-shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(0,0,0,.5)"/></filter>
+  <text
+    x="100" y="100"
+    font-family="'Fraunces','Georgia',serif"
+    font-size="96"
+    font-weight="900"
+    font-style="normal"
+    font-variation-settings="'opsz' 144"
+    fill="#FFFFFF"
+    opacity="1"
+    text-anchor="middle"
+    dominant-baseline="central"
+    letter-spacing="-2" filter="url(#txt-shadow)"
+  >SC</text>
+  
+  <defs>
+    <radialGradient id="gloss-tl" cx="28%" cy="22%" r="65%" fx="28%" fy="22%">
+      <stop offset="0%"   stop-color="rgba(255,255,255,.22)"/>
+      <stop offset="55%"  stop-color="rgba(255,255,255,.04)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+    <linearGradient id="gloss-edge" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="rgba(255,255,255,.14)"/>
+      <stop offset="8%"   stop-color="rgba(255,255,255,.04)"/>
+      <stop offset="92%"  stop-color="rgba(0,0,0,.06)"/>
+      <stop offset="100%" stop-color="rgba(0,0,0,.18)"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="42" ry="42" fill="url(#gloss-tl)"/>
+  <rect width="200" height="200" rx="42" ry="42" fill="url(#gloss-edge)"/>
+  <rect x=".8" y=".8" width="198.4" height="198.4" rx="41.5" ry="41.5" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="1.6"/>
+</svg>

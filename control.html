@@ -541,6 +541,9 @@ bc.onmessage = function(e) {
     st.textContent = '\u2705 Vid\u00E9o pr\u00EAte (' + sizeMB + ' Mo) \u2014 cliquez T\u00E9l\u00E9charger'; st.style.color = '#00e676';
     document.getElementById('btnRecSave').style.display = '';
   }
+  if (d.type === 'config-imported') {
+    loadConfigFromDisk();
+  }
 };
 
 // ═══ PREVIEW SCALING ═══════════════════════════════
@@ -779,7 +782,7 @@ function timerReset() { clearInterval(tInt); tRun = false; tVal = tDur;
   document.getElementById('btnTs').textContent = '\u25B6 Start'; document.getElementById('btnTs').className = 'btn g'; updT(); }
 function setDur(v) { tDur = parseInt(v); tVal = tDur; tRun = false; clearInterval(tInt);
   document.getElementById('btnTs').textContent = '\u25B6 Start'; document.getElementById('btnTs').className = 'btn g';
-  document.getElementById('durLabel').textContent = 'Dur\u00E9e : ' + v + ' s'; updT(); }
+  document.getElementById('durLabel').textContent = 'Dur\u00E9e : ' + v + ' s'; updT(); autoSaveConfig(); }
 function triggerCountdown() { bc.postMessage({ type: 'countdown-321' }); }
 function showScores() { bc.postMessage({ type: 'show-scores', players: players, maxLaughs: maxLaughs }); }
 
@@ -870,7 +873,7 @@ function removeCustom(i) {
   if (!confirm('Supprimer "' + customSounds[i].name + '" ?')) return;
   customSounds.splice(i, 1); saveCustomSounds(); renderCustomSounds();
 }
-function saveCustomSounds() { try { localStorage.setItem('sc-custom-sounds', JSON.stringify(customSounds)); } catch (e) {} }
+function saveCustomSounds() { try { localStorage.setItem('sc-custom-sounds', JSON.stringify(customSounds)); } catch (e) {} autoSaveConfig(); }
 function loadCustomSounds() { try { var s = localStorage.getItem('sc-custom-sounds'); if (s) customSounds = JSON.parse(s); } catch (e) {} renderCustomSounds(); }
 
 // ═══ MEMES ═════════════════════════════════════════
@@ -889,10 +892,10 @@ function handleMemeUpload(input, mediaType) {
             var c = document.createElement('canvas'); c.width = 120; c.height = 90;
             c.getContext('2d').drawImage(img, 0, 0, 120, 90);
             item.thumb = c.toDataURL('image/jpeg', 0.5);
-            memes.push(item); renderMemes();
+            memes.push(item); renderMemes(); autoSaveConfig();
           };
           img.src = e.target.result;
-        } else { memes.push(item); renderMemes(); }
+        } else { memes.push(item); renderMemes(); autoSaveConfig(); }
       };
       reader.readAsDataURL(file);
     })(files[fi]);
@@ -915,7 +918,7 @@ function triggerMeme(i) {
   bc.postMessage({ type: 'show-meme', mediaType: m.type, dataUrl: m.dataUrl, duration: m.type === 'image' ? 4000 : 0 });
   if (sessionActive) logEvent('meme', 'Meme: ' + m.name);
 }
-function removeMeme(i) { memes.splice(i, 1); renderMemes(); }
+function removeMeme(i) { memes.splice(i, 1); renderMemes(); autoSaveConfig(); }
 
 // ═══ MICROPHONE (voix live) ════════════════════════
 var micStream = null, micActive = false, micAudioCtx = null, micSource = null, micDest = null;
@@ -1594,6 +1597,7 @@ function saveState() {
     localStorage.setItem('sc-players', JSON.stringify(players));
     localStorage.setItem('sc-maxLaughs', String(maxLaughs));
   } catch (e) {}
+  autoSaveConfig();
 }
 function loadState() {
   try {
@@ -1606,6 +1610,50 @@ function loadState() {
       renderPlayers();
     }
   } catch (e) {}
+}
+
+// ═══ CONFIG AUTO-SAVE / LOAD ═══════════════════════
+var _cfgSaveTimer = null;
+var _cfgLoading = false;
+
+function autoSaveConfig() {
+  if (_cfgLoading) return;
+  if (_cfgSaveTimer) clearTimeout(_cfgSaveTimer);
+  _cfgSaveTimer = setTimeout(function() {
+    if (!window.sc || !window.sc.saveConfig) return;
+    window.sc.saveConfig({
+      version: 1,
+      maxLaughs: maxLaughs,
+      timerDuration: tDur,
+      players: players,
+      customSounds: customSounds,
+      memes: memes.map(function(m) { return { type: m.type, name: m.name, dataUrl: m.dataUrl, thumb: m.thumb || '' }; })
+    });
+  }, 500);
+}
+
+function loadConfigFromDisk() {
+  if (!window.sc || !window.sc.loadConfig) { loadState(); loadCustomSounds(); return; }
+  _cfgLoading = true;
+  window.sc.loadConfig().then(function(res) {
+    if (!res.ok || !res.data) { _cfgLoading = false; loadState(); loadCustomSounds(); autoSaveConfig(); return; }
+    var cfg = res.data;
+    if (cfg.maxLaughs !== undefined) { maxLaughs = cfg.maxLaughs; document.getElementById('maxLaughsIn').value = maxLaughs; }
+    if (cfg.timerDuration !== undefined) {
+      tDur = cfg.timerDuration; tVal = tDur;
+      document.getElementById('timerRange').value = Math.min(tDur, 300);
+      document.getElementById('durLabel').textContent = 'Dur\u00e9e : ' + tDur + ' s';
+    }
+    if (cfg.players && cfg.players.length) {
+      players = cfg.players;
+      players.forEach(function(p) { if (p.laughs === undefined) p.laughs = 0; if (p.photo === undefined) p.photo = ''; });
+    } else { loadState(); }
+    if (cfg.customSounds) { customSounds = cfg.customSounds; }
+    else { loadCustomSounds(); }
+    if (cfg.memes) { memes = cfg.memes; }
+    _cfgLoading = false;
+    renderPlayers(); renderCustomSounds(); renderMemes(); updT();
+  }).catch(function() { _cfgLoading = false; loadState(); loadCustomSounds(); });
 }
 
 // ═══ SYNC ══════════════════════════════════════════
@@ -1632,7 +1680,7 @@ function moveDisplayToScreen() {
 }
 
 // ═══ INIT ══════════════════════════════════════════
-renderGames(); loadState(); loadCustomSounds(); initCam(); updT();
+renderGames(); loadConfigFromDisk(); initCam(); updT();
 scalePrevFrame(); loadScreenList(); refreshAudioDevices();
 </script>
 </body>

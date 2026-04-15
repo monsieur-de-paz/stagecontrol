@@ -13,6 +13,7 @@ protocol.registerSchemesAsPrivileged([{
 
 let controlWin = null;
 let displayWin = null;
+let configPath = null;
 
 // ═══ IPC RELAY ═════════════════════════════════════
 // Relay messages between renderer windows
@@ -104,6 +105,27 @@ ipcMain.handle('export-recording', async () => {
   if (result.canceled || !result.filePath) return { saved: false };
   fs.copyFileSync(recTempPath, result.filePath);
   return { saved: true, path: result.filePath };
+});
+
+// ═══ CONFIGURATION ═════════════════════════════════
+ipcMain.handle('save-config', async (_event, configData) => {
+  if (!configPath) return { ok: false, error: 'App not ready' };
+  try {
+    fs.writeFileSync(configPath, JSON.stringify(configData), 'utf8');
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
+ipcMain.handle('load-config', async () => {
+  if (!configPath || !fs.existsSync(configPath)) return { ok: true, data: null };
+  try {
+    const raw = fs.readFileSync(configPath, 'utf8');
+    return { ok: true, data: JSON.parse(raw) };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
 });
 
 // ═══ CREATE WINDOWS ════════════════════════════════
@@ -223,8 +245,49 @@ function buildMenu() {
         }))
       ]
     },
-    {
-      label: 'Fenêtre',
+    {      label: 'Configuration',
+      submenu: [
+        {
+          label: 'Exporter la configuration\u2026',
+          click: async () => {
+            if (!configPath || !fs.existsSync(configPath)) {
+              dialog.showMessageBoxSync(controlWin || BrowserWindow.getFocusedWindow(), { message: 'Aucune configuration sauvegard\u00e9e.', type: 'info' });
+              return;
+            }
+            const result = await dialog.showSaveDialog(controlWin || BrowserWindow.getFocusedWindow(), {
+              title: 'Exporter la configuration',
+              defaultPath: 'StageControl-config.scconfig',
+              filters: [{ name: 'StageControl Config', extensions: ['scconfig'] }]
+            });
+            if (!result.canceled && result.filePath) {
+              fs.copyFileSync(configPath, result.filePath);
+            }
+          }
+        },
+        {
+          label: 'Importer une configuration\u2026',
+          click: async () => {
+            const result = await dialog.showOpenDialog(controlWin || BrowserWindow.getFocusedWindow(), {
+              title: 'Importer une configuration',
+              filters: [{ name: 'StageControl Config', extensions: ['scconfig'] }],
+              properties: ['openFile']
+            });
+            if (result.canceled || !result.filePaths.length) return;
+            try {
+              const raw = fs.readFileSync(result.filePaths[0], 'utf8');
+              JSON.parse(raw);
+              fs.copyFileSync(result.filePaths[0], configPath);
+              if (controlWin && !controlWin.isDestroyed()) {
+                controlWin.webContents.send('sc-msg', { type: 'config-imported' });
+              }
+            } catch (e) {
+              dialog.showMessageBoxSync(controlWin || BrowserWindow.getFocusedWindow(), { message: 'Fichier de configuration invalide.\n' + e.message, type: 'error' });
+            }
+          }
+        }
+      ]
+    },
+    {      label: 'Fenêtre',
       submenu: [
         { role: 'minimize' },
         { role: 'zoom' },
@@ -253,6 +316,9 @@ function buildMenu() {
 
 // ═══ APP LIFECYCLE ═════════════════════════════════
 app.whenReady().then(async () => {
+  // Config path
+  configPath = path.join(app.getPath('userData'), 'config.json');
+
   // Request camera permission on macOS (native OS dialog)
   if (process.platform === 'darwin') {
     const camStatus = systemPreferences.getMediaAccessStatus('camera');

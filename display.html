@@ -101,6 +101,8 @@ body{background:#000;width:100vw;height:100vh;overflow:hidden;font-family:var(--
 #ovlMeme.vis{opacity:1;pointer-events:auto}
 #memeImg,#memeVid{max-width:75vw;max-height:75vh;border-radius:16px;
   box-shadow:0 0 80px rgba(0,0,0,.8),0 0 0 4px rgba(255,255,255,.15);display:none}
+#memeImg.transparent{box-shadow:none;border-radius:0;background:transparent}
+#ovlMeme.no-bg{background:transparent}
 #ovlMeme.vis #memeImg,#ovlMeme.vis #memeVid{animation:memePop .35s cubic-bezier(.34,1.56,.64,1)}
 @keyframes memePop{from{transform:scale(.3) rotate(-8deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
 
@@ -668,6 +670,9 @@ function showMeme(mediaType, dataUrl, duration) {
   img.style.display = 'none'; vid.style.display = 'none'; vid.pause(); vid.removeAttribute('src');
   if (memeTimer) clearTimeout(memeTimer);
   if (mediaType === 'image') {
+    var isPng = dataUrl && (dataUrl.indexOf('data:image/png') === 0 || dataUrl.indexOf('data:image/webp') === 0 || dataUrl.indexOf('data:image/gif') === 0);
+    img.className = isPng ? 'transparent' : '';
+    ov.classList.toggle('no-bg', isPng);
     img.src = dataUrl; img.style.display = 'block';
     ov.classList.remove('vis'); void ov.offsetWidth; ov.classList.add('vis');
     memeTimer = setTimeout(function() { ov.classList.remove('vis'); }, duration || 4000);

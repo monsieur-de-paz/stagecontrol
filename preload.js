@@ -35,6 +35,10 @@ contextBridge.exposeInMainWorld('sc', {
   finishRecording: () => ipcRenderer.invoke('finish-recording'),
   exportRecording: () => ipcRenderer.invoke('export-recording'),
 
+  // Configuration
+  saveConfig: (data) => ipcRenderer.invoke('save-config', data),
+  loadConfig: () => ipcRenderer.invoke('load-config'),
+
   // Platform info
   platform: process.platform
 });

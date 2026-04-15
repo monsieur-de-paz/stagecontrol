@@ -118,8 +118,7 @@ function createWindows() {
     height: 900,
     x: primary.bounds.x + 20,
     y: primary.bounds.y + 20,
-    title: 'StageControl — RÉGIE',
-    backgroundColor: '#07070f',
+    title: 'StageControl — RÉGIE',    icon: path.join(__dirname, 'icone', 'stagecontrol.icns'),    backgroundColor: '#07070f',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -135,7 +134,7 @@ function createWindows() {
 
   displayWin = new BrowserWindow({
     ...displayBounds,
-    title: 'StageControl — Display',    frame: false,    backgroundColor: '#000000',
+    title: 'StageControl — Display',    frame: false,    icon: path.join(__dirname, 'icone', 'stagecontrol.icns'),    backgroundColor: '#000000',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -195,7 +194,7 @@ function buildMenu() {
                 : { x: primary.bounds.x + 80, y: primary.bounds.y + 80, width: 1280, height: 720 };
               displayWin = new BrowserWindow({
                 ...bounds,
-                title: 'StageControl — Display',                frame: false,                backgroundColor: '#000000',
+                title: 'StageControl — Display',                frame: false,                icon: path.join(__dirname, 'icone', 'stagecontrol.icns'),                backgroundColor: '#000000',
                 webPreferences: {
                   preload: path.join(__dirname, 'preload.js'),
                   contextIsolation: true,

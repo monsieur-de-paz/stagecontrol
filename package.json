@@ -14,6 +14,7 @@
     "mac": {
       "category": "public.app-category.entertainment",
       "target": "dmg",
+      "icon": "icone/stagecontrol.icns",
       "darkModeSupport": true,
       "extendInfo": {
         "NSCameraUsageDescription": "StageControl a besoin de la caméra pour filmer les participants.",
@@ -25,7 +26,8 @@
       "preload.js",
       "control.html",
       "display.html",
-      "fonts/**/*"
+      "fonts/**/*",
+      "icone/stagecontrol.icns"
     ]
   },
   "devDependencies": {

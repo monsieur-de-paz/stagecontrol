@@ -9,7 +9,7 @@
 :root{--fd:'Bebas Neue',cursive;--fu:'Exo 2',sans-serif}
 body{background:#000;width:100vw;height:100vh;overflow:hidden;font-family:var(--fu);color:#fff;cursor:none}
 
-#feed{position:fixed;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;
+#feed{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;
   will-change:transform;transform:translateZ(0);image-rendering:auto;
   -webkit-transform:translateZ(0);backface-visibility:hidden}
 .L{position:fixed;pointer-events:none;z-index:10}
@@ -374,7 +374,7 @@ function initCam() {
     return;
   }
   navigator.mediaDevices.getUserMedia({
-    video: { width: { ideal: 4096 }, height: { ideal: 2160 }, frameRate: { ideal: 30, max: 30 } }, audio: false
+    video: { width: { ideal: 4096 }, height: { ideal: 2160 }, aspectRatio: { ideal: 1.7778, min: 1.3 }, frameRate: { ideal: 30, max: 30 } }, audio: false
   }).then(function(s) {
     stream = s; feed.srcObject = s;
     document.getElementById('standby').style.display = 'none';
@@ -385,7 +385,7 @@ function initCam() {
 function switchCam(deviceId) {
   if (stream) { stopRec(); stream.getTracks().forEach(function(t) { t.stop(); }); }
   navigator.mediaDevices.getUserMedia({
-    video: { deviceId: { exact: deviceId }, width: { ideal: 4096 }, height: { ideal: 2160 }, frameRate: { ideal: 30, max: 30 } }, audio: false
+    video: { deviceId: { exact: deviceId }, width: { ideal: 4096 }, height: { ideal: 2160 }, aspectRatio: { ideal: 1.7778, min: 1.3 }, frameRate: { ideal: 30, max: 30 } }, audio: false
   }).then(function(s) {
     stream = s; feed.srcObject = s;
     document.getElementById('standby').style.display = 'none';

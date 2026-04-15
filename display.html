@@ -913,7 +913,7 @@ function startRecording() {
       if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm';
       var initP = (window.sc && window.sc.initRecording) ? window.sc.initRecording('webm') : Promise.resolve(null);
       initP.then(function() {
-        recorder = new MediaRecorder(ms, { mimeType: mime, videoBitsPerSecond: 3500000 });
+        recorder = new MediaRecorder(ms, { mimeType: mime, videoBitsPerSecond: 8000000 });
         recorder.ondataavailable = function(e) {
           if (e.data && e.data.size > 0 && window.sc && window.sc.writeRecordingChunk) {
             e.data.arrayBuffer().then(function(buf) {

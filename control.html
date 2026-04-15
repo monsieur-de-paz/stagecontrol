@@ -114,6 +114,14 @@ select:focus{outline:none;border-color:var(--cyan)}
 .pscore.bump{animation:scoreflash .45s ease}
 @keyframes scoreflash{0%{transform:scale(2.2);color:var(--white)}50%{transform:scale(1.4);color:var(--yellow)}100%{transform:scale(1);color:var(--yellow)}}
 .prow-actions{display:flex;gap:4px;align-items:center}
+.import-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center}
+.import-modal-bg.vis{display:flex}
+.import-modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;width:380px;max-height:80vh;display:flex;flex-direction:column;gap:12px}
+.import-modal h3{margin:0;font-size:14px;color:var(--cyan)}
+.import-modal textarea{width:100%;height:160px;resize:vertical;background:var(--bg);border:1px solid var(--border);color:var(--white);border-radius:6px;padding:8px;font-size:12px;font-family:var(--font-u)}
+.import-modal .hint{font-size:11px;color:#666;margin:0}
+.import-modal .sep{display:flex;align-items:center;gap:10px;font-size:11px;color:#555}
+.import-modal .sep hr{flex:1;border:none;border-top:1px solid var(--border)}
 
 .cfg-row{display:flex;align-items:center;gap:8px;font-size:12px}
 .cfg-row input[type=number]{width:50px;background:var(--bg);border:1px solid var(--border);
@@ -427,11 +435,28 @@ input[type=range]{width:100%;accent-color:var(--yellow);cursor:pointer}
     <button class="btn sm" onclick="resetAll()">↺ Reset</button>
     <button class="btn sm p" onclick="eliAll()">✕ Élim. tous</button>
     <button class="btn sm" onclick="resetLaughs()">↺ Rires</button>
+    <button class="btn sm c" onclick="openImportPlayers()">📋 Importer</button>
   </div>
   <div class="plist" id="plist">
     <div style="color:#444;font-size:12px;text-align:center;padding:20px">Aucun joueur</div>
   </div>
 </aside>
+
+<!-- IMPORT PLAYERS MODAL -->
+<div class="import-modal-bg" id="importPlayersBg" onclick="if(event.target===this)closeImportPlayers()">
+  <div class="import-modal">
+    <h3>📋 Importer des joueurs</h3>
+    <p class="hint">Collez une liste de noms (un par ligne) depuis Notion, Excel, etc.</p>
+    <textarea id="importPlayersText" placeholder="PRÉNOM&#10;Jassim&#10;Stella&#10;Alyssa&#10;..." oninput="previewImport()"></textarea>
+    <div class="sep"><hr><span>ou</span><hr></div>
+    <input type="file" id="importCsvFile" accept=".csv,.tsv,.txt" onchange="handleCsvImport(this)" style="font-size:11px">
+    <div id="importPreview" style="font-size:11px;color:var(--yellow);display:none"></div>
+    <div class="row">
+      <button class="btn c" onclick="confirmImportPlayers()">✓ Importer</button>
+      <button class="btn" onclick="closeImportPlayers()">✕ Annuler</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODALS -->
 <div class="cap-detail" id="capDetail">
@@ -1204,6 +1229,58 @@ function addPlayer() {
   var inp = document.getElementById('newP'), name = inp.value.trim(); if (!name) return;
   players.push({ name: name, score: 0, eli: false, laughs: 0, photo: '' });
   inp.value = ''; renderPlayers();
+}
+
+/* ── Import joueurs (CSV / copier-coller) ── */
+function openImportPlayers() {
+  document.getElementById('importPlayersText').value = '';
+  document.getElementById('importCsvFile').value = '';
+  document.getElementById('importPreview').style.display = 'none';
+  document.getElementById('importPlayersBg').classList.add('vis');
+}
+function closeImportPlayers() { document.getElementById('importPlayersBg').classList.remove('vis'); }
+
+function parsePlayerNames(raw) {
+  var skip = ['prénom','prenom','nom','name','joueur','player','first name','firstname'];
+  return raw.split(/[\r\n]+/).map(function(line) {
+    // take first column if tab/semicolon/comma separated
+    var cell = line.split(/[\t;,]/)[0].trim();
+    return cell;
+  }).filter(function(n) {
+    return n && !skip.includes(n.toLowerCase());
+  }).map(function(n) {
+    // capitalize: first letter upper, rest lower
+    return n.charAt(0).toUpperCase() + n.slice(1).toLowerCase();
+  });
+}
+
+function handleCsvImport(input) {
+  var file = input.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('importPlayersText').value = e.target.result;
+    previewImport();
+  };
+  reader.readAsText(file);
+}
+
+function previewImport() {
+  var names = parsePlayerNames(document.getElementById('importPlayersText').value);
+  var el = document.getElementById('importPreview');
+  if (names.length) {
+    el.textContent = names.length + ' joueur' + (names.length > 1 ? 's' : '') + ' détecté' + (names.length > 1 ? 's' : '') + ' : ' + names.join(', ');
+    el.style.display = 'block';
+  } else { el.style.display = 'none'; }
+}
+
+function confirmImportPlayers() {
+  var names = parsePlayerNames(document.getElementById('importPlayersText').value);
+  if (!names.length) return;
+  names.forEach(function(n) {
+    players.push({ name: n, score: 0, eli: false, laughs: 0, photo: '' });
+  });
+  renderPlayers();
+  closeImportPlayers();
 }
 function editName(i) {
   var el = document.getElementById('pname' + i);

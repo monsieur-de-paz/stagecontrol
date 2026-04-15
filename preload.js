@@ -39,6 +39,9 @@ contextBridge.exposeInMainWorld('sc', {
   saveConfig: (data) => ipcRenderer.invoke('save-config', data),
   loadConfig: () => ipcRenderer.invoke('load-config'),
 
+  // Open external URL in default browser
+  openUrl: (url) => ipcRenderer.send('open-url', url),
+
   // Platform info
   platform: process.platform
 });

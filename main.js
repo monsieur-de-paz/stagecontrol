@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, systemPreferences, screen, Menu, session, protocol, net, desktopCapturer, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, systemPreferences, screen, Menu, shell, session, protocol, net, desktopCapturer, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -14,6 +14,40 @@ protocol.registerSchemesAsPrivileged([{
 let controlWin = null;
 let displayWin = null;
 let configPath = null;
+
+// ═══ OPEN EXTERNAL URL ════════════════════════════
+ipcMain.on('open-url', (_event, url) => {
+  const safe = /^https?:\/\//i.test(url);
+  if (safe) shell.openExternal(url);
+});
+
+// ═══ ABOUT WINDOW ══════════════════════════════════
+let aboutWin = null;
+function openAboutWindow() {
+  if (aboutWin && !aboutWin.isDestroyed()) { aboutWin.focus(); return; }
+  aboutWin = new BrowserWindow({
+    width: 360,
+    height: 480,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    frame: false,
+    titleBarStyle: 'hidden',
+    title: 'À propos — StageControl',
+    icon: path.join(__dirname, 'icone', 'stagecontrol.icns'),
+    backgroundColor: '#07070f',
+    parent: controlWin || undefined,
+    modal: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+  aboutWin.loadURL('app://local/about.html');
+  aboutWin.on('closed', () => { aboutWin = null; });
+}
 
 // ═══ IPC RELAY ═════════════════════════════════════
 // Relay messages between renderer windows
@@ -149,6 +183,21 @@ function createWindows() {
   });
   controlWin.loadURL('app://local/control.html');
 
+  // Context menu (cut / copy / paste) for all editable fields
+  controlWin.webContents.on('context-menu', (_event, params) => {
+    const items = [];
+    if (params.isEditable || params.editFlags.canCut || params.editFlags.canCopy || params.editFlags.canPaste) {
+      if (params.editFlags.canCut)  items.push({ role: 'cut',   label: 'Couper'  });
+      if (params.editFlags.canCopy) items.push({ role: 'copy',  label: 'Copier'  });
+      items.push({ role: 'paste', label: 'Coller' });
+      items.push({ type: 'separator' });
+      items.push({ role: 'selectAll', label: 'Tout sélectionner' });
+    } else if (params.editFlags.canCopy) {
+      items.push({ role: 'copy', label: 'Copier' });
+    }
+    if (items.length) Menu.buildFromTemplate(items).popup({ window: controlWin });
+  });
+
   // Display window — on external monitor if available, otherwise secondary window
   const displayBounds = external
     ? { x: external.bounds.x, y: external.bounds.y, width: external.bounds.width, height: external.bounds.height }
@@ -186,7 +235,10 @@ function buildMenu() {
     {
       label: 'StageControl',
       submenu: [
-        { role: 'about', label: 'À propos de StageControl' },
+        {
+          label: 'À propos de StageControl…',
+          click: () => openAboutWindow()
+        },
         { type: 'separator' },
         { role: 'quit', label: 'Quitter' }
       ]

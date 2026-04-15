@@ -372,7 +372,7 @@ function initCam() {
     return;
   }
   navigator.mediaDevices.getUserMedia({
-    video: { width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false
+    video: { width: { ideal: 4096 }, height: { ideal: 2160 }, frameRate: { ideal: 60 } }, audio: false
   }).then(function(s) {
     stream = s; feed.srcObject = s;
     document.getElementById('standby').style.display = 'none';
@@ -383,7 +383,7 @@ function initCam() {
 function switchCam(deviceId) {
   if (stream) { stopRec(); stream.getTracks().forEach(function(t) { t.stop(); }); }
   navigator.mediaDevices.getUserMedia({
-    video: { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false
+    video: { deviceId: { exact: deviceId }, width: { ideal: 4096 }, height: { ideal: 2160 }, frameRate: { ideal: 60 } }, audio: false
   }).then(function(s) {
     stream = s; feed.srcObject = s;
     document.getElementById('standby').style.display = 'none';
@@ -913,7 +913,7 @@ function startRecording() {
       if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm';
       var initP = (window.sc && window.sc.initRecording) ? window.sc.initRecording('webm') : Promise.resolve(null);
       initP.then(function() {
-        recorder = new MediaRecorder(ms, { mimeType: mime, videoBitsPerSecond: 8000000 });
+        recorder = new MediaRecorder(ms, { mimeType: mime, videoBitsPerSecond: 4000000 });
         recorder.ondataavailable = function(e) {
           if (e.data && e.data.size > 0 && window.sc && window.sc.writeRecordingChunk) {
             e.data.arrayBuffer().then(function(buf) {

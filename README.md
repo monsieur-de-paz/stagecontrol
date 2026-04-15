@@ -1,8 +1,8 @@
 # 🎬 StageControl
 
-**Régie de spectacle pour le jeu « LOL Qui rit sort ! » — Application Electron macOS.**
+**Régie de spectacle pour un jeu TV comptabilisant le nombre de rire par joueurs — Application Electron macOS.**
 
-StageControl pilote en temps réel un écran de scène (caméra, overlays, mini-jeux, replay, sons, memes, scores…) depuis une interface de régie dédiée. Pensé pour les animateurs et directeurs d'activités en colo, centre de loisirs ou spectacle.
+StageControl pilote en temps réel un écran de scène (caméra, overlays, mini-jeux, replay, sons, memes, scores…) depuis une interface de régie dédiée. Pensé pour les animateurs et directeurs d'activités en colo, centre de loisirs ou entre potes.
 
 > **Version 0.2 beta** — Fonctionne sous macOS. `.dmg` généré via `npm run dist`.
 
@@ -144,5 +144,3 @@ electron/
 ## 📜 Licence
 
 Open source — [MIT](https://opensource.org/licenses/MIT).
-
-Créé par Sandro De Paz pour le jeu « LOL Qui rit sort ! »

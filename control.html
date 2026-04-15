@@ -158,6 +158,18 @@ select:focus{outline:none;border-color:var(--cyan)}
 .summary-content td,.summary-content th{border:1px solid var(--border);padding:6px 10px;text-align:left}
 .summary-content th{background:rgba(255,255,255,.03);color:var(--cyan);font-weight:600}
 .summary-content p{font-size:13px;margin:4px 0}
+.sm-sc-title{font-family:var(--font-d);font-size:32px;color:var(--yellow);letter-spacing:6px;margin-bottom:18px;text-align:center}
+.sm-sc-list{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.sm-sc-row{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);padding:10px 18px;border-radius:10px}
+.sm-sc-rank{font-family:var(--font-d);font-size:24px;color:#666;width:32px;text-align:center}
+.sm-sc-rank.g{color:#ffd700}.sm-sc-rank.s{color:#c0c0c0}.sm-sc-rank.b{color:#cd7f32}
+.sm-sc-name{font-size:15px;font-weight:700;flex:1}
+.sm-sc-laughs{font-size:11px;opacity:.5;margin-left:6px}
+.sm-sc-eli{font-size:11px;color:var(--pink);opacity:.7;margin-left:8px;font-weight:400;letter-spacing:1px}
+.sm-sc-pts{font-family:var(--font-d);font-size:28px;color:var(--yellow)}
+.sm-sc-row.eli{opacity:.4;border-color:rgba(255,255,255,.03)}
+.sm-sc-row.eli .sm-sc-pts{color:#666}
 
 .btn{background:var(--panel);color:var(--white);border:1px solid var(--border);
   padding:8px 14px;border-radius:6px;cursor:pointer;font-family:var(--font-u);
@@ -242,6 +254,19 @@ input[type=range]{width:100%;accent-color:var(--yellow);cursor:pointer}
     </div>
   </div>
 
+  <div class="st">🎙 Micro (voix live)</div>
+  <div class="cfg-row">
+    <span>Entrée :</span>
+    <select id="micInSel" style="flex:1"><option>Chargement…</option></select>
+    <button class="btn sm" onclick="refreshAudioDevices()" title="Actualiser">🔄</button>
+  </div>
+  <div class="cfg-row">
+    <span>Sortie :</span>
+    <select id="micOutSel" style="flex:1"><option>Chargement…</option></select>
+  </div>
+  <button class="btn w" id="btnMic" onclick="toggleMic()" style="border-color:#ff3d71;color:#ff3d71">🎙 Activer le micro</button>
+  <div class="hint" id="micStatus">Micro désactivé</div>
+
   <div class="st">⏪ REPLAY</div>
   <button class="btn-replay" onclick="triggerReplay()">⏪ REPLAY</button>
   <div class="hint">Rejoue les ~20 dernières secondes</div>
@@ -260,8 +285,17 @@ input[type=range]{width:100%;accent-color:var(--yellow);cursor:pointer}
   </div>
   <div id="sessionInfo" style="display:none">
     <div class="hint" id="sessionTime" style="color:var(--pink);font-size:12px">🔴 Partie en cours</div>
-    <button class="btn p w" onclick="endSession()">⏹ Terminer la partie</button>
+    <div class="row">
+      <button class="btn p w" onclick="endSession()" style="flex:1">⏹ Terminer la partie</button>
+    </div>
   </div>
+
+  <div class="st">🎥 Enregistrement vidéo</div>
+  <div class="row">
+    <button class="btn w" id="btnRec" onclick="toggleRecording()" style="border-color:#ff3d71;color:#ff3d71;flex:1">⏺ Enregistrer la partie</button>
+    <button class="btn g" id="btnRecSave" onclick="exportRecording()" style="display:none;flex:1">📥 Télécharger la vidéo</button>
+  </div>
+  <div class="hint" id="recStatus">Aucun enregistrement en cours</div>
 
   <div class="st">🎮 Mini-Jeux</div>
   <div class="gg" id="gg"></div>
@@ -487,6 +521,25 @@ bc.onmessage = function(e) {
       dov.style.display = 'block'; dov.width = dov.offsetWidth; dov.height = dov.offsetHeight;
     } else { dov.style.display = 'none'; }
     document.getElementById('btnRpPause').textContent = d.paused ? '\u25B6 Reprendre' : '\u23F8 Pause';
+  }
+  if (d.type === 'recording-state') {
+    isRecording = d.recording;
+    var btn = document.getElementById('btnRec');
+    var st = document.getElementById('recStatus');
+    if (d.recording) {
+      btn.textContent = '\u23F9 Arr\u00EAter l\u2019enregistrement'; btn.style.borderColor = '#00e676'; btn.style.color = '#00e676';
+      st.textContent = '\uD83D\uDD34 Enregistrement en cours\u2026'; st.style.color = '#ff3d71';
+      document.getElementById('btnRecSave').style.display = 'none';
+    } else {
+      btn.textContent = '\u23FA Enregistrer la partie'; btn.style.borderColor = '#ff3d71'; btn.style.color = '#ff3d71';
+      st.textContent = d.error ? 'Erreur : ' + d.error : 'Aucun enregistrement en cours'; st.style.color = '';
+    }
+  }
+  if (d.type === 'recording-done') {
+    var st = document.getElementById('recStatus');
+    var sizeMB = d.size ? (d.size / 1048576).toFixed(1) : '?';
+    st.textContent = '\u2705 Vid\u00E9o pr\u00EAte (' + sizeMB + ' Mo) \u2014 cliquez T\u00E9l\u00E9charger'; st.style.color = '#00e676';
+    document.getElementById('btnRecSave').style.display = '';
   }
 };
 
@@ -717,7 +770,7 @@ function timerToggle() {
     b.textContent = '\u23F8 Pause'; b.className = 'btn p';
     tInt = setInterval(function() {
       if (tVal > 0) { tVal--; updT(); if (tVal === 5) snd('tick');
-        if (tVal === 0) { tRun = false; clearInterval(tInt); b.textContent = '\u25B6 Start'; b.className = 'btn g'; snd('buzzer'); if(curGame) hideOvl(); } }
+        if (tVal === 0) { tRun = false; clearInterval(tInt); b.textContent = '\u25B6 Start'; b.className = 'btn g'; if(curGame) hideOvl(); } }
     }, 1000);
   } else { clearInterval(tInt); b.textContent = '\u25B6 Start'; b.className = 'btn g'; }
   updT();
@@ -864,6 +917,91 @@ function triggerMeme(i) {
 }
 function removeMeme(i) { memes.splice(i, 1); renderMemes(); }
 
+// ═══ MICROPHONE (voix live) ════════════════════════
+var micStream = null, micActive = false, micAudioCtx = null, micSource = null, micDest = null;
+var micOutAudio = null;
+
+function refreshAudioDevices() {
+  navigator.mediaDevices.enumerateDevices().then(function(devs) {
+    var inSel = document.getElementById('micInSel');
+    var outSel = document.getElementById('micOutSel');
+    var curIn = inSel.value, curOut = outSel.value;
+    var inputs = devs.filter(function(d) { return d.kind === 'audioinput'; });
+    var outputs = devs.filter(function(d) { return d.kind === 'audiooutput'; });
+    inSel.innerHTML = inputs.map(function(d) {
+      return '<option value="' + d.deviceId + '">' + (d.label || 'Micro ' + d.deviceId.slice(0,6)) + '</option>';
+    }).join('');
+    outSel.innerHTML = outputs.map(function(d) {
+      return '<option value="' + d.deviceId + '">' + (d.label || 'Sortie ' + d.deviceId.slice(0,6)) + '</option>';
+    }).join('');
+    if (curIn && inSel.querySelector('option[value="' + curIn + '"]')) inSel.value = curIn;
+    if (curOut && outSel.querySelector('option[value="' + curOut + '"]')) outSel.value = curOut;
+  });
+}
+
+function toggleMic() {
+  if (micActive) {
+    stopMic();
+  } else {
+    startMic();
+  }
+}
+
+function startMic() {
+  var deviceId = document.getElementById('micInSel').value;
+  var outDeviceId = document.getElementById('micOutSel').value;
+  if (!deviceId) return;
+
+  navigator.mediaDevices.getUserMedia({
+    audio: { deviceId: { exact: deviceId }, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+  }).then(function(stream) {
+    micStream = stream;
+    micActive = true;
+
+    // Create a hidden audio element to route to the selected output device
+    micOutAudio = document.createElement('audio');
+    micOutAudio.srcObject = stream;
+    micOutAudio.volume = 1.0;
+    if (micOutAudio.setSinkId && outDeviceId) {
+      micOutAudio.setSinkId(outDeviceId).then(function() {
+        micOutAudio.play();
+      }).catch(function() { micOutAudio.play(); });
+    } else {
+      micOutAudio.play();
+    }
+
+    document.getElementById('btnMic').textContent = '\uD83D\uDD07 Couper le micro';
+    document.getElementById('btnMic').style.borderColor = '#00e676';
+    document.getElementById('btnMic').style.color = '#00e676';
+    document.getElementById('micStatus').textContent = 'Micro actif — en direct';
+    document.getElementById('micStatus').style.color = '#00e676';
+    bc.postMessage({ type: 'mic-active', active: true });
+  }).catch(function(err) {
+    document.getElementById('micStatus').textContent = 'Erreur : ' + err.message;
+    document.getElementById('micStatus').style.color = '#ff3d71';
+  });
+}
+
+function stopMic() {
+  if (micStream) {
+    micStream.getTracks().forEach(function(t) { t.stop(); });
+    micStream = null;
+  }
+  if (micOutAudio) {
+    micOutAudio.pause();
+    micOutAudio.srcObject = null;
+    micOutAudio = null;
+  }
+  micActive = false;
+  document.getElementById('btnMic').textContent = '\uD83C\uDF99 Activer le micro';
+  document.getElementById('btnMic').style.borderColor = '#ff3d71';
+  document.getElementById('btnMic').style.color = '#ff3d71';
+  document.getElementById('micStatus').textContent = 'Micro d\u00E9sactiv\u00E9';
+  document.getElementById('micStatus').style.color = '';
+  bc.postMessage({ type: 'mic-active', active: false });
+  bc.postMessage({ type: 'mic-stream-stop' });
+}
+
 // ═══ GAMES (with config panel) ═════════════════════
 var GAMES = [
   { id: 'q', ico: '\u2753', nm: 'Question Pi\u00E8ge', dc: 'R\u00E9pondre sans rire', col: '#ffe600' },
@@ -968,11 +1106,12 @@ function launchGame() {
     gameData.content = ''; gameData.showContent = false;
   }
 
+  curGame = gameData;
   bc.postMessage({ type: 'show-overlay', game: gameData });
 
   // Badge
   var badge = document.getElementById('curGameBadge');
-  badge.textContent = curGame.ico + ' ' + curGame.nm;
+  badge.textContent = gameData.ico + ' ' + gameData.nm;
   badge.style.color = curGame.col; badge.classList.add('active');
 
   // Auto-timer
@@ -1272,6 +1411,29 @@ function downloadCapture() {
 
 // ═══ SESSION MANAGEMENT ════════════════════════════
 var sessionActive = false, sessionStartTime = null, sessionEvents = [], sessionTimerInt = null;
+var isRecording = false;
+
+function toggleRecording() {
+  if (isRecording) {
+    bc.postMessage({ type: 'stop-recording' });
+  } else {
+    bc.postMessage({ type: 'start-recording' });
+  }
+}
+
+function exportRecording() {
+  if (window.sc && window.sc.exportRecording) {
+    var st = document.getElementById('recStatus');
+    st.textContent = 'Enregistrement en cours\u2026'; st.style.color = '#ffe600';
+    window.sc.exportRecording().then(function(res) {
+      if (res.saved) {
+        st.textContent = '\u2705 Vid\u00E9o enregistr\u00E9e : ' + res.path; st.style.color = '#00e676';
+      } else {
+        st.textContent = 'Enregistrement annul\u00E9'; st.style.color = '';
+      }
+    });
+  }
+}
 
 function startSession() {
   if (sessionActive) return;
@@ -1319,16 +1481,30 @@ function fmtDate() { return sessionStartTime.toLocaleDateString('fr').replace(/\
 
 function showSummary() {
   var dur = sessionEvents.length > 1 ? sessionEvents[sessionEvents.length - 1].elapsed : 0;
-  var winner = players.slice().filter(function(p) { return !p.eli; }).sort(function(a, b) { return b.score - a.score; });
+  var alive = players.slice().filter(function(p) { return !p.eli; }).sort(function(a, b) { return b.score - a.score; });
+  var dead = players.slice().filter(function(p) { return p.eli; }).sort(function(a, b) { return b.score - a.score; });
+  var all = alive.concat(dead);
+
   var html = '<h2>\uD83C\uDFAC BILAN DE PARTIE</h2>';
   html += '<p><strong>Date</strong> : ' + sessionStartTime.toLocaleDateString('fr') + ' \u2014 <strong>D\u00E9but</strong> : ' + sessionStartTime.toLocaleTimeString('fr') + '</p>';
   html += '<p><strong>Dur\u00E9e</strong> : ' + formatDuration(dur) + ' \u2014 <strong>Droits de rire</strong> : ' + maxLaughs + '</p>';
-  if (winner.length) html += '<p style="font-size:18px;margin-top:10px">\uD83C\uDFC6 Gagnant : <strong style="color:var(--yellow)">' + esc(winner[0].name) + '</strong> (' + winner[0].score + ' pts)</p>';
-  html += '<h3>\uD83D\uDC65 Joueurs</h3><table><tr><th>Joueur</th><th>Score</th><th>Rires</th><th>Statut</th></tr>';
-  players.forEach(function(p) {
-    html += '<tr><td>' + esc(p.name) + '</td><td>' + p.score + '</td><td>' + p.laughs + '/' + maxLaughs + '</td><td>' + (p.eli ? '\u274C \u00C9limin\u00E9' : '\u2705 En jeu') + '</td></tr>';
+
+  // Score display — identical to display.html
+  html += '<div class="sm-sc-title">\uD83C\uDFC6 SCORES</div><div class="sm-sc-list">';
+  all.forEach(function(p, i) {
+    var isAlive = !p.eli;
+    var rc = isAlive ? (i === 0 ? 'g' : i === 1 ? 's' : i === 2 ? 'b' : '') : '';
+    var rank = isAlive ? (alive.indexOf(p) + 1) : '\u2014';
+    var lf = p.laughs ? '<span class="sm-sc-laughs"> \uD83D\uDE02\u00D7' + p.laughs + '</span>' : '';
+    var eliTag = p.eli ? '<span class="sm-sc-eli">\uD83D\uDC80 \u00C9LIMIN\u00C9</span>' : '';
+    html += '<div class="sm-sc-row' + (p.eli ? ' eli' : '') + '">' +
+      '<div class="sm-sc-rank ' + rc + '">' + rank + '</div>' +
+      '<div class="sm-sc-name">' + esc(p.name) + lf + eliTag + '</div>' +
+      '<div class="sm-sc-pts">' + p.score + ' pts</div></div>';
   });
-  html += '</table><h3>\uD83D\uDCCB Chronologie (' + sessionEvents.length + ' \u00E9v\u00E9nements)</h3>';
+  html += '</div>';
+
+  html += '<h3>\uD83D\uDCCB Chronologie (' + sessionEvents.length + ' \u00E9v\u00E9nements)</h3>';
   html += '<div style="max-height:250px;overflow-y:auto;font-size:12px">';
   sessionEvents.forEach(function(ev) {
     html += '<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,.05)"><strong>' + formatDuration(ev.elapsed) + '</strong> \u2014 ' + esc(ev.detail) + '</div>';
@@ -1457,7 +1633,7 @@ function moveDisplayToScreen() {
 
 // ═══ INIT ══════════════════════════════════════════
 renderGames(); loadState(); loadCustomSounds(); initCam(); updT();
-scalePrevFrame(); loadScreenList();
+scalePrevFrame(); loadScreenList(); refreshAudioDevices();
 </script>
 </body>
 </html>

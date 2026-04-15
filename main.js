@@ -1,5 +1,7 @@
-const { app, BrowserWindow, ipcMain, systemPreferences, screen, Menu, session, protocol, net } = require('electron');
+const { app, BrowserWindow, ipcMain, systemPreferences, screen, Menu, session, protocol, net, desktopCapturer, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
 const { pathToFileURL } = require('url');
 
 // ═══ CUSTOM PROTOCOL ═══════════════════════════════
@@ -55,6 +57,55 @@ ipcMain.handle('toggle-display-fullscreen', () => {
   displayWin.setFullScreen(!displayWin.isFullScreen());
 });
 
+// ═══ VIDEO RECORDING ══════════════════════════════
+let recTempPath = null;
+let recWriteStream = null;
+
+ipcMain.handle('init-recording', async (_event, ext) => {
+  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const name = 'StageControl-' + ts + '.' + (ext || 'webm');
+  recTempPath = path.join(os.tmpdir(), name);
+  recWriteStream = fs.createWriteStream(recTempPath);
+  return { tempPath: recTempPath, name: name };
+});
+
+ipcMain.handle('write-recording-chunk', async (_event, chunk) => {
+  if (recWriteStream && !recWriteStream.destroyed) {
+    const buf = Buffer.isBuffer(chunk) ? chunk
+      : ArrayBuffer.isView(chunk) ? Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength)
+      : Buffer.from(chunk);
+    if (buf.length > 0) recWriteStream.write(buf);
+  }
+});
+
+ipcMain.handle('finish-recording', async () => {
+  return new Promise((resolve) => {
+    if (recWriteStream && !recWriteStream.destroyed) {
+      recWriteStream.end(() => {
+        const p = recTempPath;
+        const size = fs.existsSync(p) ? fs.statSync(p).size : 0;
+        recWriteStream = null;
+        resolve({ tempPath: p, size: size });
+      });
+    } else {
+      resolve({ tempPath: recTempPath, size: 0 });
+    }
+  });
+});
+
+ipcMain.handle('export-recording', async () => {
+  if (!recTempPath || !fs.existsSync(recTempPath)) return { saved: false };
+  const ext = path.extname(recTempPath).slice(1);
+  const result = await dialog.showSaveDialog(controlWin || BrowserWindow.getFocusedWindow(), {
+    title: 'Enregistrer la vid\u00e9o',
+    defaultPath: path.basename(recTempPath),
+    filters: [{ name: 'Vid\u00e9o', extensions: [ext, 'webm', 'mp4', 'mov'] }]
+  });
+  if (result.canceled || !result.filePath) return { saved: false };
+  fs.copyFileSync(recTempPath, result.filePath);
+  return { saved: true, path: result.filePath };
+});
+
 // ═══ CREATE WINDOWS ════════════════════════════════
 function createWindows() {
   const displays = screen.getAllDisplays();
@@ -84,12 +135,12 @@ function createWindows() {
 
   displayWin = new BrowserWindow({
     ...displayBounds,
-    title: 'StageControl — Display',
-    backgroundColor: '#000000',
+    title: 'StageControl — Display',    frame: false,    backgroundColor: '#000000',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      backgroundThrottling: false
     }
   });
   displayWin.loadURL('app://local/display.html');
@@ -144,12 +195,12 @@ function buildMenu() {
                 : { x: primary.bounds.x + 80, y: primary.bounds.y + 80, width: 1280, height: 720 };
               displayWin = new BrowserWindow({
                 ...bounds,
-                title: 'StageControl — Display',
-                backgroundColor: '#000000',
+                title: 'StageControl — Display',                frame: false,                backgroundColor: '#000000',
                 webPreferences: {
                   preload: path.join(__dirname, 'preload.js'),
                   contextIsolation: true,
-                  nodeIntegration: false
+                  nodeIntegration: false,
+                  backgroundThrottling: false
                 }
               });
               displayWin.loadURL('app://local/display.html');
@@ -209,6 +260,10 @@ app.whenReady().then(async () => {
     if (camStatus !== 'granted') {
       await systemPreferences.askForMediaAccess('camera');
     }
+    const micStatus = systemPreferences.getMediaAccessStatus('microphone');
+    if (micStatus !== 'granted') {
+      await systemPreferences.askForMediaAccess('microphone');
+    }
   }
 
   // Register app:// protocol handler
@@ -220,6 +275,18 @@ app.whenReady().then(async () => {
 
   // Allow camera/microphone everywhere (main windows + preview iframe)
   session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(true));
+
+  // Auto-select display window for getDisplayMedia (video recording)
+  session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
+    try {
+      const sources = await desktopCapturer.getSources({ types: ['window'] });
+      const wantedId = (displayWin && !displayWin.isDestroyed()) ? displayWin.getMediaSourceId() : null;
+      const displaySource = sources.find(s => s.id === wantedId) || sources.find(s => s.name.includes('Display')) || sources[0];
+      callback({ video: displaySource, audio: 'loopback' });
+    } catch (e) {
+      callback(null);
+    }
+  });
 
   buildMenu();
   createWindows();

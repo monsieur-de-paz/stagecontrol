@@ -25,6 +25,16 @@ contextBridge.exposeInMainWorld('sc', {
   moveDisplayTo: (displayId) => ipcRenderer.invoke('move-display-to', displayId),
   toggleDisplayFullscreen: () => ipcRenderer.invoke('toggle-display-fullscreen'),
 
+  // Video recording
+  initRecording: (ext) => ipcRenderer.invoke('init-recording', ext),
+  writeRecordingChunk: (chunk) => {
+    // Ensure we send a proper Uint8Array for reliable IPC serialization
+    var arr = chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk);
+    return ipcRenderer.invoke('write-recording-chunk', arr);
+  },
+  finishRecording: () => ipcRenderer.invoke('finish-recording'),
+  exportRecording: () => ipcRenderer.invoke('export-recording'),
+
   // Platform info
   platform: process.platform
 });

@@ -52,6 +52,21 @@ body{background:#000;width:100vw;height:100vh;overflow:hidden;font-family:var(--
 .sc-name{font-size:26px;font-weight:700;flex:1}
 .sc-laughs{font-size:16px;opacity:.5;margin-left:8px}
 .sc-pts{font-family:var(--fd);font-size:44px;color:#ffe600}
+.sc-row.eli{opacity:.4;border-color:rgba(255,255,255,.04)}
+.sc-row.eli .sc-pts{color:#666}
+.sc-eli{font-size:13px;color:#ff3d71;opacity:.7;margin-left:10px;font-weight:400;letter-spacing:1px}
+
+/* MIC ICON */
+#micOvl{bottom:28px;left:28px;z-index:15;opacity:0;transition:opacity .3s;pointer-events:none}
+#micOvl.vis{opacity:1}
+.mic-wrap{display:flex;align-items:center;gap:10px;padding:10px 18px;border-radius:40px;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.15)}
+.mic-icon{width:32px;height:32px;position:relative;display:flex;align-items:center;justify-content:center}
+.mic-icon svg{width:28px;height:28px;fill:#ff3d71}
+.mic-rings{position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(255,61,113,.5);animation:micPulse 1s ease-in-out infinite}
+.mic-rings:nth-child(2){inset:-12px;animation-delay:.3s;border-color:rgba(255,61,113,.25)}
+@keyframes micPulse{0%,100%{transform:scale(.92);opacity:.6}50%{transform:scale(1.08);opacity:1}}
+.mic-label{font-family:var(--fu);font-size:13px;font-weight:600;color:#ff3d71;letter-spacing:2px;text-transform:uppercase}
 
 /* ELIMINATION */
 #ovlElim{inset:0;display:flex;align-items:center;justify-content:center;
@@ -191,6 +206,8 @@ body{background:#000;width:100vw;height:100vh;overflow:hidden;font-family:var(--
 </head>
 <body>
 
+<div id="dragBar" style="position:fixed;top:0;left:0;right:0;height:28px;-webkit-app-region:drag;z-index:99;cursor:default"></div>
+
 <div id="standby">
   <h1>🎬 STAGECONTROL</h1>
   <p class="pulse">En attente de la caméra…<br>
@@ -249,6 +266,15 @@ body{background:#000;width:100vw;height:100vh;overflow:hidden;font-family:var(--
   <div class="intro-sub">CONTROL</div>
 </div>
 
+<div id="micOvl" class="L">
+  <div class="mic-wrap">
+    <div class="mic-icon">
+      <div class="mic-rings"></div><div class="mic-rings"></div>
+      <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 0014 0h-2zM11 19.93V22h2v-2.07A8 8 0 0020 12h-2a6 6 0 01-12 0H4a8 8 0 007 7.93z"/></svg>
+    </div>
+    <span class="mic-label">LIVE</span>
+  </div>
+</div>
 <div id="colorFlash"></div>
 <canvas id="confetti"></canvas>
 <canvas id="drawCanvas"></canvas>
@@ -327,6 +353,11 @@ bc.onmessage = function(e) {
     case 'play-custom-sound': playCustomSound(d.dataUrl); break;
     case 'show-meme': showMeme(d.mediaType, d.dataUrl, d.duration); break;
     case 'hide-meme': hideMeme(); break;
+    case 'mic-active': document.getElementById('micOvl').classList.toggle('vis', !!d.active); break;
+    case 'mic-stream-start': startMicPassthrough(d.deviceId); break;
+    case 'mic-stream-stop': stopMicPassthrough(); break;
+    case 'start-recording': startRecording(); break;
+    case 'stop-recording': stopRecording(); break;
   }
 };
 
@@ -541,13 +572,17 @@ function cacheP(p, ml) {
 }
 
 function renderSc() {
-  var sorted = playersC.slice().filter(function(p) { return !p.eli; }).sort(function(a, b) { return b.score - a.score; });
-  var h = sorted.map(function(p, i) {
-    var rc = i === 0 ? 'g' : i === 1 ? 's' : i === 2 ? 'b' : '';
+  var alive = playersC.slice().filter(function(p) { return !p.eli; }).sort(function(a, b) { return b.score - a.score; });
+  var dead = playersC.slice().filter(function(p) { return p.eli; }).sort(function(a, b) { return b.score - a.score; });
+  var all = alive.concat(dead);
+  var h = all.map(function(p, i) {
+    var isAlive = !p.eli;
+    var rc = isAlive ? (i === 0 ? 'g' : i === 1 ? 's' : i === 2 ? 'b' : '') : '';
     var lf = p.laughs ? '<span class="sc-laughs"> \uD83D\uDE02\u00D7' + p.laughs + '</span>' : '';
-    return '<div class="sc-row" style="animation-delay:' + i * .09 + 's">' +
-      '<div class="sc-rank ' + rc + '">' + (i + 1) + '</div>' +
-      '<div class="sc-name">' + esc(p.name) + lf + '</div>' +
+    var eliTag = p.eli ? '<span class="sc-eli">\uD83D\uDC80 \u00C9LIMIN\u00C9</span>' : '';
+    return '<div class="sc-row' + (p.eli ? ' eli' : '') + '" style="animation-delay:' + i * .09 + 's">' +
+      '<div class="sc-rank ' + rc + '">' + (isAlive ? (alive.indexOf(p) + 1) : '\u2014') + '</div>' +
+      '<div class="sc-name">' + esc(p.name) + lf + eliTag + '</div>' +
       '<div class="sc-pts">' + p.score + ' pts</div></div>';
   }).join('');
   document.getElementById('scList').innerHTML = h;
@@ -650,6 +685,7 @@ function hideMeme() {
 
 // ═══ SOUNDS (with overlap fix) ═════════════════════
 var actx = new (window.AudioContext || window.webkitAudioContext)();
+var audioMaster = actx.createGain(); audioMaster.connect(actx.destination);
 var activeNodes = [];
 var lastCustomAudioD = null;
 
@@ -663,7 +699,7 @@ function stopAllSoundsDisplay() {
 function tone(f, d, type, v, t) {
   type = type || 'sine'; v = v || .5; t = t || 0;
   var o = actx.createOscillator(), g = actx.createGain();
-  o.connect(g); g.connect(actx.destination);
+  o.connect(g); g.connect(audioMaster);
   o.type = type; o.frequency.setValueAtTime(f, actx.currentTime + t);
   g.gain.setValueAtTime(v, actx.currentTime + t);
   g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + t + d);
@@ -676,7 +712,7 @@ function noise(d, v) {
   var n = actx.sampleRate * d, b = actx.createBuffer(1, n, actx.sampleRate), data = b.getChannelData(0);
   for (var i = 0; i < n; i++) data[i] = Math.random() * 2 - 1;
   var s = actx.createBufferSource(), g = actx.createGain();
-  s.buffer = b; s.connect(g); g.connect(actx.destination);
+  s.buffer = b; s.connect(g); g.connect(audioMaster);
   g.gain.setValueAtTime(v, actx.currentTime);
   g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + d); s.start();
   activeNodes.push(s);
@@ -701,8 +737,12 @@ function playSound(name) {
 }
 function playCustomSound(dataUrl) {
   if (!dataUrl || isPreview) return;
+  actx.resume();
   stopAllSoundsDisplay();
-  lastCustomAudioD = new Audio(dataUrl); lastCustomAudioD.play().catch(function() {});
+  lastCustomAudioD = new Audio(dataUrl);
+  var src = actx.createMediaElementSource(lastCustomAudioD);
+  src.connect(audioMaster);
+  lastCustomAudioD.play().catch(function() {});
 }
 
 // ═══ FULLSCREEN ════════════════════════════════════
@@ -820,6 +860,98 @@ function stopMosaic(showFeed) {
   var wrap = document.getElementById('mosaicWrap');
   wrap.innerHTML = ''; wrap.classList.remove('vis');
   if (showFeed !== false) feed.style.display = '';
+}
+
+// ═══ MIC PASSTHROUGH (routed through audioMaster for recording) ═══
+var micPTStream = null, micPTSource = null, micPTDeviceId = null;
+
+function startMicPassthrough(deviceId) {
+  stopMicPassthrough();
+  micPTDeviceId = deviceId || null;
+  actx.resume().then(function() {
+    navigator.mediaDevices.getUserMedia({
+      audio: { deviceId: deviceId ? { exact: deviceId } : undefined, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    }).then(function(stream) {
+      micPTStream = stream;
+      micPTSource = actx.createMediaStreamSource(stream);
+      micPTSource.connect(audioMaster);
+    }).catch(function(err) { console.warn('Mic passthrough error:', err); });
+  });
+}
+
+function stopMicPassthrough() {
+  if (micPTSource) { try { micPTSource.disconnect(); } catch(e) {} micPTSource = null; }
+  if (micPTStream) { micPTStream.getTracks().forEach(function(t) { t.stop(); }); micPTStream = null; }
+  micPTDeviceId = null;
+}
+
+// ═══ VIDEO RECORDING ═══════════════════════════════
+var recorder = null, recDisplayStream = null, recAudioDest = null, recLoopbackSource = null;
+
+function startRecording() {
+  if (recorder || isPreview) return;
+  actx.resume().then(function() {
+    // Capture the Display window via getDisplayMedia (Electron auto-selects via setDisplayMediaRequestHandler)
+    navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 24 } }, audio: true }).then(function(displayStream) {
+      recDisplayStream = displayStream;
+      // Single audio destination: everything mixed here
+      recAudioDest = actx.createMediaStreamDestination();
+      audioMaster.connect(recAudioDest);
+      // If display loopback has audio, route it through the AudioContext too
+      if (displayStream.getAudioTracks().length > 0) {
+        try {
+          recLoopbackSource = actx.createMediaStreamSource(new MediaStream(displayStream.getAudioTracks()));
+          recLoopbackSource.connect(recAudioDest);
+        } catch(e) { console.warn('Loopback routing:', e); }
+      }
+      // Build final stream: video + single mixed audio track
+      var ms = new MediaStream();
+      displayStream.getVideoTracks().forEach(function(t) { ms.addTrack(t); });
+      recAudioDest.stream.getAudioTracks().forEach(function(t) { ms.addTrack(t); });
+      var mime = 'video/webm;codecs=vp8,opus';
+      if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm;codecs=vp9,opus';
+      if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm';
+      var initP = (window.sc && window.sc.initRecording) ? window.sc.initRecording('webm') : Promise.resolve(null);
+      initP.then(function() {
+        recorder = new MediaRecorder(ms, { mimeType: mime, videoBitsPerSecond: 3500000 });
+        recorder.ondataavailable = function(e) {
+          if (e.data && e.data.size > 0 && window.sc && window.sc.writeRecordingChunk) {
+            e.data.arrayBuffer().then(function(buf) {
+              window.sc.writeRecordingChunk(new Uint8Array(buf));
+            });
+          }
+        };
+        recorder.onstop = function() {
+          if (window.sc && window.sc.finishRecording) {
+            window.sc.finishRecording().then(function(res) {
+              bc.postMessage({ type: 'recording-done', size: res.size, tempPath: res.tempPath });
+            });
+          }
+          recorder = null;
+        };
+        recorder.start(2000);
+        bc.postMessage({ type: 'recording-state', recording: true });
+        // If the display capture track ends externally, stop
+        displayStream.getVideoTracks()[0].onended = function() { stopRecording(); };
+      });
+    }).catch(function(err) {
+      console.error('Recording error:', err);
+      bc.postMessage({ type: 'recording-state', recording: false, error: err.message });
+    });
+  });
+}
+
+function stopRecording() {
+  if (recorder && recorder.state !== 'inactive') {
+    try { recorder.requestData(); } catch(e) {}
+    setTimeout(function() {
+      if (recorder && recorder.state !== 'inactive') recorder.stop();
+    }, 200);
+  }
+  if (recLoopbackSource) { try { recLoopbackSource.disconnect(); } catch(e) {} recLoopbackSource = null; }
+  if (recDisplayStream) { recDisplayStream.getTracks().forEach(function(t) { t.stop(); }); recDisplayStream = null; }
+  if (recAudioDest) { try { audioMaster.disconnect(recAudioDest); } catch(e) {} recAudioDest = null; }
+  bc.postMessage({ type: 'recording-state', recording: false });
 }
 
 // ═══ INIT ══════════════════════════════════════════
